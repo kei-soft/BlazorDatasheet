@@ -1,0 +1,37 @@
+namespace BlazorDatasheet.Formula.Core.Interpreter.Lexing;
+
+public enum Tag
+{
+    Eof,
+    Number,
+    BadToken,
+    GreaterThanOrEqualToToken,
+    LessThanOrEqualToToken,
+    StringToken,
+    PlusToken,
+    StarToken,
+    MinusToken,
+    SlashToken,
+    EqualsToken,
+    IdentifierToken,
+    NotEqualToToken,
+    GreaterThanToken,
+    BangToken,
+    PercentToken,
+    LessThanToken,
+    LeftParenthToken,
+    RightParenthToken,
+    LeftCurlyBracketToken,
+    RightCurlyBracketToken,
+    AmpersandToken,
+    ColonToken,
+    AddressToken,
+    LogicalToken,
+    Whitespace,
+    SheetLocatorToken,
+    ErrorToken,
+    CommaToken,
+    SemiColonToken,
+    BackslashToken,
+    DotToken
+}

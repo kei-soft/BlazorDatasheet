@@ -1,0 +1,57 @@
+@using BlazorDatasheet.Util
+@using BlazorDatasheet.Core.Interfaces
+@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Core.Edit
+@using BlazorDatasheet.Formula.Core
+@inherits BaseEditor
+
+<input
+    type="date"
+    class="date-input"
+    @bind="CurrentDateTime"
+    @bind:event="oninput"
+    style="@Style; width: @(CellWidth - 2)px; height: @(CellHeight - 2)px;"
+    @ref="InputRef"/>
+
+@code {
+
+    private IReadOnlyCell Cell { get; set; }
+    private DateTime _dateTime;
+
+    private DateTime? CurrentDateTime
+    {
+        get
+        {
+            var parsed = DateTime.TryParse(CurrentValue, out var parsedDateTime);
+            if (parsed)
+                return parsedDateTime;
+            else
+                return null;
+        }
+        set
+        {
+            if (value.HasValue)
+                this.OnValueChanged.InvokeAsync(value.ToString());
+        }
+    }
+
+    public override void BeforeEdit(IReadOnlyCell cell, Sheet sheet)
+    {
+        Cell = cell;
+        CurrentValue = cell?.Value?.ToString() ?? string.Empty;
+    }
+
+    public override void BeginEdit(EditEntryMode entryMode, string? editValue, string key)
+    {
+        /*var canParse = DateTime.TryParse(editValue?.ToString(), out var parsedDateTime);
+            if (canParse)
+            {
+                CurrentDateTime = parsedDateTime;
+            }
+            else
+            {
+                CurrentDateTime = DateTime.Now;
+            }*/
+    }
+
+}

@@ -1,0 +1,76 @@
+﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Core.Events.Edit
+@using BlazorDatasheet.DataStructures.Geometry
+@using BlazorDatasheet.DataStructures.Store
+@using BlazorDatasheet.Formula.Core.Interpreter.Parsing
+@inherits Layer
+
+<div class="highlight-layer">
+    @foreach (var cr in _colorRegions)
+    {
+        var r = cr.Region.GetIntersection(Sheet.Region);
+        if (r == null)
+            continue;
+        var x = GetLayerColumnX(r.Left);
+        var y = GetLayerRowY(r.Top);
+        var w = Sheet.Columns.GetVisualWidthBetween(r.Left, r.Right + 1);
+        var h = Sheet.Rows.GetVisualHeightBetween(r.Top, r.Bottom + 1);
+        <BoxOverlayRenderer
+            Width="w"
+            Height="h"
+            X="x"
+            Y="y"
+            ZIndex="12"
+            BorderStyle="solid"
+            BorderColor="@cr.Data"
+            BorderThickness="1"/>
+    }
+</div>
+
+
+@code {
+
+    private List<DataRegion<string>> _colorRegions = new();
+
+    protected override void OnSheetChange(Sheet newSheet, Sheet oldSheet)
+    {
+        oldSheet.Editor.EditValueChanged -= EditorOnEditValueChanged;
+        oldSheet.Editor.EditFinished -= EditorOnEditFinished;
+        newSheet.Editor.EditValueChanged += EditorOnEditValueChanged;
+        newSheet.Editor.EditFinished += EditorOnEditFinished;
+    }
+
+    private void EditorOnEditFinished(object? sender, EditFinishedEventArgs e)
+    {
+        _colorRegions.Clear();
+        StateHasChanged();
+    }
+
+    private void HighlightRanges()
+    {
+        if (Sheet.Editor.EditValue.StartsWith("="))
+        {
+            var formula = Sheet.FormulaEngine.ParseFormula(Sheet.Editor.EditValue, Sheet.Name, false);
+            if (!formula.References.Any())
+            {
+                _colorRegions = new List<DataRegion<string>>();
+                return;
+            }
+
+            _colorRegions = new();
+            foreach (var reference in formula.References)
+            {
+                var colorIndex = (_colorRegions.Count % 5) + 1;
+                var isValid = reference.SheetName == Sheet.Name;
+                _colorRegions.Add(new DataRegion<string>($"var(--highlight-color-{colorIndex})", isValid ? reference.Region : new EmptyRegion()));
+            }
+        }
+    }
+
+    private void EditorOnEditValueChanged(object? sender, string? e)
+    {
+        HighlightRanges();
+        StateHasChanged();
+    }
+
+}

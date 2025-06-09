@@ -1,0 +1,47 @@
+@using BlazorDatasheet.Util
+@inherits SheetComponentBase
+
+<!--Renders a box at a particular row/column with a width & height -->
+
+<div style="@GetSizeStyleString(); box-sizing: border-box; position: absolute; pointer-events: none;">
+</div>
+
+@code {
+
+    [Parameter] public double X { get; set; }
+
+    [Parameter] public double Y { get; set; }
+
+    [Parameter] public double Width { get; set; }
+
+    [Parameter] public double Height { get; set; }
+
+    [Parameter] public int ZIndex { get; set; }
+
+    [Parameter] public double BorderThickness { get; set; }
+
+    [Parameter] public string BackgroundColor { get; set; } = "var(--selection-bg-color)";
+
+    [Parameter] public string BorderColor { get; set; } = "var(--selection-border-color);";
+
+    [Parameter] public bool BackgroundVisible { get; set; }
+
+    [Parameter] public string BorderStyle { get; set; } = "solid";
+
+    private string GetSizeStyleString()
+    {
+        var sb = new StyleBuilder();
+
+        sb.AddStyle($"left", $"{X}px");
+        sb.AddStyle($"top", $"{Y}px");
+        sb.AddStyle($"width", $"{Width}px;");
+        sb.AddStyle($"height", $"{Height}px;");
+        sb.AddStyle("z-index", ZIndex.ToString());
+        sb.AddStyle("outline", $"{BorderThickness}px {BorderStyle} {BorderColor}", BorderThickness != 0);
+        sb.AddStyle("outline-offset", $"{-BorderThickness/2}px", BorderThickness != 0);
+        sb.AddStyle("background", BackgroundColor, BackgroundVisible);
+
+        return sb.ToString();
+    }
+
+}

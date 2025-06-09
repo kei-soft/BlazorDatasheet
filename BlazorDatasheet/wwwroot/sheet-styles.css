@@ -1,0 +1,369 @@
+﻿.vars {
+    --sheet-font-weight: normal;
+    --sheet-font-size: 0.75rem;
+    --sheet-font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Helvetica Neue, Arial, sans-serif;
+}
+
+.vars[theme='default'] {
+    --sheet-foreground-color: #454545;
+    --sheet-bg-color: #ffffff;
+    --sheet-border-style: 1px solid #c5c5c5;
+    --row-header-bg-color: #fafafa;
+    --col-header-bg-color: #fafafa;
+    --head-selection-bg-color: rgb(218, 230, 243);
+    --row-header-foreground-color: #red;
+    --col-header-foreground-color: #5c5a5a;
+    --icon-color: #000000;
+    --shadow-overlay-color: grey;
+    --invalid-cell-foreground-color: #ff0000;
+    --selection-bg-color: rgba(158, 200, 243, 0.36);
+    --selection-border-color: #0998e5;
+    --cell-highlight-bg-color: #a9e5b6;
+    --num-highlight-color: #43a3b4;
+    --string-highlight-color: #1a6206;
+    --sheet-menu-bg-color: #fff;
+    --sheet-menu-hover-color: #cde6f6;
+    --sheet-button-bg-color: #f4f4f4;
+    --sheet-button-bg-hover-color: #ffffff;
+    --sheet-button-border: 1px solid #979797;
+    --highlight-color-1: red;
+    --highlight-color-2: blue;
+    --highlight-color-3: purple;
+    --highlight-color-4: green;
+    --highlight-color-5: brown;
+    --frozen-border-color: rgba(89, 85, 85, 0.4);
+    --header-selected-bg-color: #0a53be;
+}
+
+.vars[theme='dark'] {
+    --sheet-foreground-color: #a9a9a9;
+    --sheet-bg-color: #262626;
+    --sheet-border-style: 1px solid #3f3f3f;
+    --row-header-bg-color: #2d2d2d;
+    --col-header-bg-color: #2d2d2d;
+    --head-selection-bg-color: rgb(53, 57, 60);
+    --row-header-foreground-color: #a4a4a4;
+    --col-header-foreground-color: #a4a4a4;
+    --icon-color: #000000;
+    --shadow-overlay-color: #000000;
+    --invalid-cell-foreground-color: #d71b1b;
+    --selection-bg-color: rgba(83, 101, 121, 0.18);
+    --selection-border-color: #1c6f9a;
+    --cell-highlight-bg-color: #456b4d;
+    --num-highlight-color: #d4d6ec;
+    --string-highlight-color: #79a16a;
+    --sheet-menu-bg-color: #333;
+    --sheet-menu-hover-color: #202e3e;
+    --sheet-button-bg-color: #292929;
+    --sheet-button-bg-hover-color: #202e3e;
+    --sheet-button-border: 2px solid #202e3e;
+    --frozen-border-color: rgba(43, 43, 43, 0.4);
+    --header-selected-bg-color: #203d6a;
+}
+
+.active-sheet {
+    border: none;
+}
+
+.inactive-sheet {
+    border: none;
+}
+
+.sheet {
+    background: var(--sheet-bg-color);
+    font-size: var(--sheet-font-size);
+    box-sizing: border-box;
+    white-space: nowrap;
+    font-family: var(--sheet-font-family), serif;
+    -moz-osx-font-smoothing: grayscale;
+    font-weight: var(--sheet-font-weight);
+    color: var(--sheet-foreground-color);
+    contain: style;
+}
+
+.sheet-layer-container {
+    position: relative;
+    pointer-events: none;
+    top: 0;
+    left: 0;
+}
+
+.sheet-col-head-container, .sheet-row-head-container {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+}
+
+.sheet-row-head-container {
+    background: var(--row-header-bg-color);
+    color: var(--row-header-foreground-color);
+}
+
+.sheet-col-head-container {
+    background: var(--col-header-bg-color);
+    color: var(--col-header-foreground-color);
+}
+
+.sheet-button {
+    background: var(--sheet-button-bg-color);
+    border: var(--sheet-button-border);
+    color: var(--sheet-foreground-color);
+    font-size: var(--sheet-font-size);
+    font-weight: var(--sheet-font-weight);
+    font-family: var(--sheet-font-family), serif;
+    padding: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.bds-frozen-left {
+    box-shadow: 2px 0 0 var(--frozen-border-color);
+}
+
+.bds-frozen-right {
+    box-shadow: -2px 0 0 var(--frozen-border-color);
+}
+
+.bds-frozen-top {
+    box-shadow: 0 2px 0 var(--frozen-border-color);
+}
+
+.bds-frozen-bottom {
+    box-shadow: 0 -2px 0 var(--frozen-border-color);
+}
+
+.bds-main-view {
+
+}
+
+.sheet-button:hover {
+    background: var(--sheet-button-bg-hover-color);
+}
+
+.sheet-cell {
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    padding: 2px 5px;
+    border-right: var(--sheet-border-style);
+    border-bottom: var(--sheet-border-style);
+    overflow: hidden;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    box-sizing: border-box;
+}
+
+.merged-cell {
+    background: var(--sheet-bg-color);
+    border: var(--sheet-border-style);
+    pointer-events: all;
+}
+
+.sheet-left {
+    border-left: var(--sheet-border-style);
+}
+
+.sheet-top {
+}
+
+.sheet-table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.col-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.col-nonsticky {
+    border-bottom: var(--sheet-border-style);
+}
+
+.row-sticky {
+    position: sticky;
+    z-index: 3;
+    left: 0;
+}
+
+.row-head {
+    text-align: right;
+    border-left: var(--sheet-border-style);
+    justify-content: end;
+    align-items: center;
+}
+
+.col-head {
+    text-align: right;
+    border-top: var(--sheet-border-style);
+}
+
+.col-head, .row-head {
+    font-weight: bold;
+}
+
+.col-head:hover, .row-head:hover {
+    background: var(--head-selection-bg-color);
+}
+
+.col-head:active {
+    background: var(--header-selected-bg-color);
+}
+
+.invalid-cell {
+    color: var(--invalid-cell-foreground-color) !important;
+}
+
+.unselectable {
+    -webkit-user-drag: none;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.number-highlight {
+    color: var(--num-highlight-color)
+}
+
+.string-highlight {
+    color: var(--string-highlight-color)
+}
+
+.default-highlight {
+    color: var(--sheet-foreground-color)
+}
+
+.editor-overlay {
+    background: var(--sheet-bg-color);
+    box-shadow: 0 0 4px var(--shadow-overlay-color);
+    pointer-events: all;
+    position: absolute;
+    box-sizing: border-box;
+    display: inline-block;
+}
+
+.highlight-input {
+    outline: 0 solid transparent;
+    color: transparent;
+    caret-color: var(--sheet-foreground-color);
+    -webkit-user-modify: read-write-plaintext-only;
+}
+
+.highlight-input:focus {
+    outline: 0 solid transparent;
+}
+
+.highlight-input, .highlight-result {
+    display: block;
+    position: absolute;
+    box-sizing: border-box;
+    padding: 1px 4px;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+.highlight-result {
+    pointer-events: none;
+    background: inherit;
+}
+
+.bds-frozen-left .highlight-input, .bds-frozen-left .highlight-result {
+    text-wrap: wrap;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+}
+
+.bds-frozen-right .highlight-input, .bds-frozen-right .highlight-result {
+    text-wrap: wrap;
+    overflow-wrap: anywhere;
+    white-space: break-spaces;
+}
+
+.bds-selected-header-full {
+    background: var(--header-selected-bg-color);
+    color: white;
+    font-weight: bold;
+}
+
+.bds-selected-header-full:hover {
+    background: var(--header-selected-bg-color);
+}
+
+.bds-selected-header {
+    background: var(--head-selection-bg-color);
+}
+
+.bds-autoFit {
+    visibility: hidden;
+    top: 0;
+    display: inline-block;
+}
+
+.cell-container {
+    flex-grow: 1;
+}
+
+.bds-sheet-dropper {
+    background: none;
+    color:#999999;
+    margin: 0;
+    padding: 0 2px 0 2px;
+    border: none;
+    cursor: pointer;
+}
+
+.bds-sheet-dropper:hover{
+    background: var(--selection-bg-color);
+}
+
+.bds-select-text-input {
+    width: 100%;
+    border: none;
+    height: 100%;
+    box-sizing: border-box;
+}
+
+.bds-select-text-input:focus {
+    outline: none;
+}
+
+.bds-select-list {
+    min-width: 10rem;
+    z-index: 4;
+    border: var(--sheet-border-style);
+    background: var(--sheet-bg-color);
+    position: absolute;
+    overflow-y: auto;
+    color: var(--sheet-foreground-color);
+    display: block;
+    max-height: 7rem;
+    border-radius: 4px;
+}
+
+.bds-select-item {
+    cursor: pointer;
+    padding: 0.1rem 0.1rem 0.1rem 0.4rem;
+}
+
+.bds-select-item:hover,
+.bds-select-item.active {
+    background: var(--selection-bg-color)
+}
+
+.bds-func-suggestions{
+    min-width:100px;
+    margin-top:4px;
+    background: var(--sheet-bg-color);
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+}
+
+.bds-func-suggestions-item{
+    padding: 2px 4px;
+}
+
+

@@ -1,0 +1,77 @@
+﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Core.Events.Data
+@using BlazorDatasheet.DataStructures.Geometry
+@using BlazorDatasheet.Render.DefaultComponents
+@using BlazorDatasheet.Util
+@inherits Layer
+
+@if (Sheet.Cells.AnyMerges() && ViewRegion != null && Sheet.Rows.CountVisible(0, Sheet.NumRows) > 0)
+{
+    var merges = Sheet.Cells.GetMerges(ViewRegion)
+        .Select(x => x.GetIntersection(Sheet.Region));
+
+    foreach (var merge in merges)
+    {
+        if (merge == null)
+            continue;
+
+        var row = merge.Top;
+        var col = merge.Left;
+
+        if (!Cache.TryGetValue(new CellPosition(row, col), out var visualCell))
+            visualCell = new VisualCell(row, col, Sheet, NumberPrecisionDisplay);
+
+        if (visualCell.VisibleColSpan <= 1 && visualCell.VisibleRowSpan <= 1)
+        {
+            continue;
+        }
+
+        <div
+            style="position: absolute; @GetAbsoluteStyle(row, col, merge.Height, merge.Width)"
+            class="merged-cell">
+            @if (CellRenderFragment != null)
+            {
+                @CellRenderFragment(visualCell)
+            }
+        </div>
+    }
+}
+
+@code{
+
+    [Parameter, EditorRequired] public Dictionary<CellPosition, VisualCell> Cache { get; set; } = null!;
+
+    [Parameter, EditorRequired] public required int NumberPrecisionDisplay { get; set; }
+    
+    [Parameter, EditorRequired] public required RenderFragment<VisualCell> CellRenderFragment { get; set; }
+
+    protected override void OnSheetChange(Sheet newSheet, Sheet oldSheet)
+    {
+        oldSheet.Cells.CellsChanged -= CellsOnCellsChanged;
+        newSheet.Cells.CellsChanged += CellsOnCellsChanged;
+    }
+
+    private void CellsOnCellsChanged(object? sender, CellDataChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private string GetAbsoluteStyle(int row, int col, int rowSpan, int colSpan)
+    {
+        var sb = new StyleBuilder();
+        var top = GetLayerRowY(row);
+        var left = GetLayerColumnX(col);
+        var width = Sheet.Columns.GetVisualWidthBetween(col, col + colSpan);
+        var height = Sheet.Rows.GetVisualHeightBetween(row, row + rowSpan);
+
+        sb.AddStyle("top", $"{top - 1}px");
+        sb.AddStyle($"left", $"{left - 1}px;");
+        sb.AddStyle("width", $"{width + 1}px");
+        sb.AddStyle("height", $"{height + 1}px");
+
+        return sb.ToString();
+    }
+
+    protected override bool ShouldRender() => true;
+
+}

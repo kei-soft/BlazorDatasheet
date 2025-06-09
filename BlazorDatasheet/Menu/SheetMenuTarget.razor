@@ -1,0 +1,139 @@
+@using BlazorDatasheet.Services
+@using Microsoft.JSInterop
+@inject IMenuService MenuService;
+@inherits SheetComponentBase
+@implements IAsyncDisposable
+@inject IJSRuntime _js;
+
+<div
+    @ref="_menuTarget"
+    class="sheet-menu-target"
+    id="@TargetId"
+    @onclick="TargetOnClick"
+    @onclick:preventDefault="@(Trigger == MenuTrigger.OnClick)"
+    @onmousedown="TargetOnMouseDown"
+    @onmousedown:preventDefault="@(Trigger == MenuTrigger.OnPress)"
+    @onmouseover="TargetOnHover"
+    @onmouseover:preventDefault="@(Trigger == MenuTrigger.OnHover)">
+    @ChildContent
+</div>
+
+
+<style>
+    .sheet-menu-target {
+
+    }
+</style>
+
+@code {
+
+    [Parameter] public RenderFragment ChildContent { get; set; }
+
+    [Parameter] public string Trigger { get; set; } = MenuTrigger.OnClick;
+
+    [Parameter, EditorRequired] public string? MenuId { get; set; }
+
+    [Parameter] public string TargetId { get; set; } = Guid.NewGuid().ToString();
+
+    [Parameter] public string Placement { get; set; } = MenuPlacement.Bottom;
+
+    [Parameter] public double Margin { get; set; } = 5;
+
+    [Parameter] public object? MenuData { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+    private bool _disabled;
+
+    private ElementReference _menuTarget;
+    private DotNetObjectReference<SheetMenuTarget>? _dotnetRef;
+    private IJSObjectReference? _menuTargetService;
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Disabled != _disabled && Disabled)
+        {
+            _disabled = Disabled;
+
+            if (_dotnetRef == null || _menuTargetService == null)
+                return;
+
+            await _menuTargetService.InvokeVoidAsync("removeContextListener");
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_disabled && Trigger == MenuTrigger.OnContextMenu)
+        {
+            _dotnetRef = DotNetObjectReference.Create(this);
+
+            var module =
+                await _js.InvokeAsync<IJSObjectReference>("import",
+                    "./_content/BlazorDatasheet/js/menu-target.js");
+
+            _menuTargetService = await module.InvokeAsync<IJSObjectReference>(
+                "getMenuTargetService", _dotnetRef);
+
+            await _menuTargetService.InvokeVoidAsync("setContextListener", _menuTarget, nameof(TargetOnContextMenu));
+        }
+    }
+
+    private async Task TargetOnClick(MouseEventArgs obj)
+    {
+        if (Trigger != MenuTrigger.OnClick)
+            return;
+
+        await ShowMenu(MenuTrigger.OnClick, obj);
+    }
+
+    private async Task TargetOnMouseDown(MouseEventArgs obj)
+    {
+        if (Trigger != MenuTrigger.OnPress)
+            return;
+
+        await ShowMenu(MenuTrigger.OnPress, obj);
+    }
+
+    [JSInvokable(nameof(TargetOnContextMenu))]
+    public async Task TargetOnContextMenu(MouseEventArgs obj)
+    {
+        if (Trigger != MenuTrigger.OnContextMenu)
+            return;
+
+        await ShowMenu(MenuTrigger.OnContextMenu, obj);
+    }
+
+    private async Task TargetOnHover(MouseEventArgs obj)
+    {
+        if (Trigger != MenuTrigger.OnHover)
+            return;
+
+        await ShowMenu(MenuTrigger.OnHover, obj);
+    }
+
+    private async Task ShowMenu(string trigger, MouseEventArgs args)
+    {
+        if (string.IsNullOrEmpty(MenuId))
+            return;
+
+        await MenuService.ShowMenuAsync(MenuId, new MenuTargetOptions(TargetId, Placement, Margin, trigger, args.ClientX, args.ClientY), MenuData);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            _dotnetRef?.Dispose();
+            if (_menuTargetService != null)
+                await _menuTargetService.InvokeVoidAsync("dispose");
+        }
+        catch (Exception)
+        {
+            // Ignore
+        }
+    }
+
+}

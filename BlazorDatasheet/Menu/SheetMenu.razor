@@ -1,0 +1,83 @@
+@using BlazorDatasheet.Services
+@inject IMenuService MenuService
+@inherits SheetComponentBase
+@implements IAsyncDisposable
+@implements IMenu
+
+<CascadingValue Value="@MenuId">
+    <CascadingValue Value="@CurrentContext">
+        <div id="@MenuId" popover="manual" class="sheetPopover">
+            <div class="sheetMenu">
+                @ChildContent(CurrentContext)
+            </div>
+        </div>
+    </CascadingValue>
+</CascadingValue>
+
+<style>
+    .sheetMenu {
+        display: flex;
+        flex-direction: column;
+        background: var(--sheet-menu-bg-color);
+        border: var(--sheet-border-style);
+        padding: 4px 0;
+        min-width: 170px;
+        font-size: 0.8rem;
+        font-family: var(--sheet-font-family), sans-serif;
+        font-weight: var(--sheet-font-weight);
+        color: var(--sheet-foreground-color);
+    }
+
+    .sheetPopover {
+        position: fixed;
+        inset: 0;
+        width: fit-content;
+        height: fit-content;
+        margin: 0;
+        padding: 0;
+        overflow: auto;
+        border: none;
+    }
+
+</style>
+
+@code {
+
+    [Parameter, EditorRequired] public RenderFragment<object?> ChildContent { get; set; } = default!;
+
+    [Parameter] public string MenuId { get; set; } = Guid.NewGuid().ToString();
+
+    [Parameter] public string? ParentMenuId { get; set; } = null;
+
+    [Parameter] public EventCallback<MenuShownEventArgs> OnMenuOpen { get; set; }
+
+    [Parameter] public EventCallback OnMenuClose { get; set; }
+
+    public object? CurrentContext { get; set; } = null;
+
+    protected override void OnInitialized()
+    {
+        MenuService.MenuShown += (sender, args) =>
+        {
+            if (args.MenuId != this.MenuId)
+                return;
+
+            this.CurrentContext = args.Context;
+            this.StateHasChanged();
+        };
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await MenuService.RegisterMenu(MenuId, this, ParentMenuId);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await MenuService.UnregisterMenu(MenuId);
+    }
+
+}

@@ -1,0 +1,43 @@
+@namespace BlazorDatasheet.Edit.DefaultComponents
+@using BlazorDatasheet.Core.Edit
+@inherits BaseEditor
+
+@code {
+
+    public override void BeginEdit(EditEntryMode entryMode, string? editValue, string key)
+    {
+        var canParse = bool.TryParse(editValue, out bool parsedValue);
+        if (!canParse)
+        {
+            this.CancelEdit();
+            return;
+        }
+
+        CurrentValue = parsedValue.ToString();
+
+        if (entryMode == EditEntryMode.Mouse)
+        {
+            var newValue = !parsedValue;
+            CurrentValue = newValue.ToString();
+        }
+
+        if (entryMode == EditEntryMode.Key)
+        {
+            if (key.ToLower() == "y")
+            {
+                CurrentValue = true.ToString();
+            }
+            else if (key.ToLower() == "n")
+            {
+                CurrentValue = false.ToString();
+            }
+            else if (key == "Space")
+            {
+                CurrentValue = (!parsedValue).ToString();
+            }
+        }
+
+        this.AcceptEdit();
+    }
+
+}

@@ -1,0 +1,133 @@
+@using BlazorDatasheet.Core.Util
+@using BlazorDatasheet.Core.Interfaces
+@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Core.Edit
+@using BlazorDatasheet.Core.Validation
+@inherits BaseEditor
+
+<input @bind="CurrentValue"
+       @bind:event="oninput"
+       class="bds-select-text-input"
+       style="@Style; width: @(CellWidth - 2)px; height: @(CellHeight - 2)px;"
+       @ref="InputRef"/>
+<div class="bds-select-list">
+    @foreach (var val in _values)
+    {
+        <div class="bds-select-item @(val.Equals(_currentSelected) ? "active" : "")"
+             @onmouseup="() => SelectItem(val)">
+            @val
+        </div>
+    }
+</div>
+
+@code {
+
+    private string[] _values = Array.Empty<string>();
+
+    string? _currentSelected;
+
+    public override void BeforeEdit(IReadOnlyCell cell, Sheet sheet)
+    {
+        foreach (var validator in sheet.Validators.Get(cell.Row, cell.Col))
+        {
+            if (validator is SourceValidator sourceValidator)
+            {
+                _values = sourceValidator.ValidationSource.ToArray();
+                break;
+            }
+        }
+    }
+
+    public override void BeginEdit(EditEntryMode entryMode, string? editValue, string key)
+    {
+        switch (entryMode)
+        {
+            case EditEntryMode.Mouse:
+                CurrentValue = editValue ?? string.Empty;
+                StateHasChanged();
+                break;
+            case EditEntryMode.Key:
+            {
+                if (_values.Any())
+                {
+                    var keyUpped = key.ToUpperInvariant();
+                    _currentSelected = _values.FirstOrDefault(v => v.ToUpperInvariant().StartsWith(keyUpped));
+                }
+
+                if (!string.IsNullOrWhiteSpace(_currentSelected))
+                {
+                    CurrentValue = _currentSelected;
+                }
+                else
+                {
+                    CurrentValue = key;
+                }
+
+                break;
+            }
+        }
+
+        if (CurrentValue == null)
+            CurrentValue = string.Empty;
+    }
+
+    public override bool HandleKey(string key, bool ctrlKey, bool shiftKey, bool altKey, bool metaKey)
+    {
+        if (KeyUtil.IsEnter(key))
+        {
+            if (!string.IsNullOrWhiteSpace(_currentSelected))
+            {
+                SelectItem(_currentSelected);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (KeyUtil.IsKeyDown(key))
+        {
+            HoverItem(1);
+            return true;
+        }
+
+        if (KeyUtil.IsKeyUp(key))
+        {
+            HoverItem(-1);
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(CurrentValue))
+        {
+            var keyUpped = CurrentValue.ToUpperInvariant();
+            _currentSelected = _values.FirstOrDefault(v => v.ToUpperInvariant().StartsWith(keyUpped));
+
+            if (!string.IsNullOrWhiteSpace(_currentSelected))
+            {
+                StateHasChanged();
+                return true;
+            }
+        }
+
+        return base.HandleKey(key, ctrlKey, shiftKey, altKey, metaKey);
+    }
+
+    private void HoverItem(int direction)
+    {
+        var index = !string.IsNullOrWhiteSpace(_currentSelected) ? Array.IndexOf(_values, _currentSelected) : 0;
+
+        index = direction > 0 ? Math.Min(index + 1, _values.Length - 1) : Math.Max(index - 1, 0);
+
+        _currentSelected = _values[index];
+
+        StateHasChanged();
+    }
+
+    private void SelectItem(string item)
+    {
+        CurrentValue = item;
+        AcceptEdit();
+    }
+
+}

@@ -1,0 +1,202 @@
+﻿@using Microsoft.JSInterop
+@using System.Diagnostics
+@using System.Text
+@using BlazorDatasheet.DataStructures.Geometry
+@using BlazorDatasheet.Formula.Core.Interpreter
+@using BlazorDatasheet.Formula.Core.Interpreter.Lexing
+@implements IAsyncDisposable
+@inject IJSRuntime Js;
+
+<div spellcheck="false" style="position: relative; @Style">
+
+    <span class="highlight-result"
+          style="min-width:@(CellWidth - 2)px;min-height: @(CellHeight - 2)px;"
+          @ref="_highlightResultEl">
+    </span>
+
+    <span contenteditable="true"
+          class="highlight-input"
+          style="min-width:@(CellWidth - 2)px;min-height: @(CellHeight - 2)px;"
+          @ref="_highlightInputEl">
+    </span>
+
+</div>
+
+@code {
+    private string _value = string.Empty;
+    [Parameter] public required string Value { get; set; }
+
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+
+    [Parameter] public EventCallback<int> CaretPositionChanged { get; set; }
+    [Parameter] public EventCallback<Size> InputSizeChanged { get; set; }
+
+    [Parameter, EditorRequired] public required FormulaOptions FormulaOptions { get; set; }
+
+    [Parameter] public double CellWidth { get; set; }
+    [Parameter] public double CellHeight { get; set; }
+    private bool _softEdit;
+    [Parameter] public bool SoftEdit { get; set; }
+    [Parameter] public string? Style { get; set; }
+
+    private ElementReference _highlightInputEl;
+    private ElementReference _highlightResultEl;
+
+    private IJSObjectReference? _highlightJs;
+    private DotNetObjectReference<HighlightedInput>? _dotnetRef;
+
+    private bool _isDisposing;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Value != _value)
+        {
+            // Allow for external editors
+            _value = Value;
+            await SetInputTextAsync(_value);
+            await SetHighlightTextAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var module = await Js.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorDatasheet/js/highlighter.js");
+            _dotnetRef = DotNetObjectReference.Create(this);
+            var options = new HighlighterOptions()
+            {
+                InitialText = Value,
+                InitialHtml = GetHighlightedHtmlValue(Value),
+                DotnetHelper = _dotnetRef,
+                InputEl = _highlightInputEl,
+                HighlightResultEl = _highlightResultEl,
+                PreventDefaultArrowKeys = SoftEdit
+            };
+            _highlightJs = await module.InvokeAsync<IJSObjectReference>("createHighlighter", options);
+            await module.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Handles input from the editable div
+    /// </summary>
+    /// <param name="input"></param>
+    [JSInvokable]
+    public async Task HandleInput(string input)
+    {
+        _value = input;
+        await ValueChanged.InvokeAsync(input);
+        await SetHighlightTextAsync();
+    }
+
+    /// <summary>
+    /// Sets input text from Blazor -> the editable content. Used for external editors.
+    /// </summary>
+    private async Task SetInputTextAsync(string text)
+    {
+        if (_highlightJs != null && !_isDisposing)
+        {
+            await _highlightJs.InvokeVoidAsync("setInputText", text);
+            await _highlightJs.InvokeVoidAsync("setHighlightHtml", GetHighlightedHtmlValue(_value));
+        }
+    }
+
+    private async Task SetHighlightTextAsync()
+    {
+        if (_highlightJs != null && !_isDisposing)
+        {
+            await _highlightJs.InvokeVoidAsync("setHighlightHtml", GetHighlightedHtmlValue(_value));
+        }
+    }
+
+    internal async Task FocusAndMoveCursorToEndAsync()
+    {
+        if (_highlightJs != null && !_isDisposing)
+        {
+            await _highlightJs.InvokeVoidAsync("focusAndMoveCursorToEnd");
+        }
+    }
+
+    [JSInvokable]
+    public async Task HandleCaretPositionUpdate(int position)
+    {
+        await CaretPositionChanged.InvokeAsync(position);
+    }
+
+    [JSInvokable]
+    public async Task HandleInputSizeChanged(Size size)
+    {
+        await InputSizeChanged.InvokeAsync(size);
+    }
+
+    private string GetHighlightedHtmlValue(string? text)
+    {
+        if (text == null)
+            return string.Empty;
+
+        if (!text.StartsWith("="))
+            return text;
+
+        var lexer = new Lexer();
+        var tokens = lexer.Lex(text, FormulaOptions);
+
+        var sb = new StringBuilder();
+        var span = text.AsSpan();
+        int refCount = 0;
+
+        for (int i = 0; i < tokens.Count - 1; i++)
+        {
+            var start = tokens[i].PositionStart;
+            var len = tokens[i + 1].PositionStart - start;
+            var section = span.Slice(start, len);
+            sb.Append($"<span ");
+            sb.Append($"class=\"{GetClass(tokens[i].Tag)}\" ");
+            if (tokens[i].Tag == Tag.AddressToken)
+            {
+                var colorIndex = (refCount % 5) + 1;
+                sb.Append($"style=\"color:var(--highlight-color-{colorIndex})\"");
+                refCount++;
+            }
+
+            sb.Append(">");
+            sb.Append(section);
+            sb.Append($"</span>");
+        }
+
+        return sb.ToString();
+    }
+
+    private string GetClass(Tag tokenTag)
+    {
+        switch (tokenTag)
+        {
+            case Tag.Number:
+                return "number-highlight";
+            case Tag.StringToken:
+                return "string-highlight";
+            default:
+                return "default-highlight";
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            _isDisposing = true;
+            if (_highlightJs != null)
+            {
+                await _highlightJs.InvokeVoidAsync("dispose");
+                await _highlightJs.DisposeAsync();
+            }
+
+            _dotnetRef?.Dispose();
+        }
+        catch (Exception e)
+        {
+            // ignore
+        }
+    }
+
+}

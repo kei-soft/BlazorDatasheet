@@ -1,0 +1,80 @@
+﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.DataStructures.Geometry
+@using BlazorDatasheet.Render
+@using BlazorDatasheet.Render.DefaultComponents
+@{
+    var colOffset = 1;
+}
+@foreach (var col in _visibleColIndices)
+{
+    if (!Cache.TryGetValue(new CellPosition(Row, col), out var visualCell))
+        visualCell = new VisualCell(Row, col, Sheet, NumberPrecisionDisplay);
+
+    if (visualCell.Merge != null)
+    {
+        if (!visualCell.IsMergeStart)
+        {
+            colOffset++;
+            continue;
+        }
+    }
+
+    <div @key="col"
+         style="grid-row: 1; grid-column:@colOffset;">
+        @if (CellRenderFragment != null)
+        {
+            @CellRenderFragment(visualCell)
+        }
+    </div>
+    colOffset++;
+}
+
+@code {
+
+    [Parameter] public int Row { get; set; }
+
+    [Parameter] public bool IsDirty { get; set; }
+
+    [Parameter] public Sheet Sheet { get; set; } = null!;
+
+    private List<int> _visibleColIndices = new();
+    [Parameter] public List<int> VisibleColIndices { get; set; } = new();
+
+    [Parameter, EditorRequired] public Dictionary<CellPosition, VisualCell> Cache { get; set; } = null!;
+
+    [Parameter] public required RenderFragment<VisualCell>? CellRenderFragment { get; set; }
+    
+    [Parameter] public required int NumberPrecisionDisplay { get; set; }
+
+    protected override bool ShouldRender() => IsDirty || _colIndicesChanged;
+    private bool _colIndicesChanged = false;
+
+    protected override void OnParametersSet()
+    {
+        if (VisibleColIndices != _visibleColIndices)
+        {
+            if (!IsDirty)
+            {
+                _colIndicesChanged = CompareIndices(_visibleColIndices, VisibleColIndices);
+            }
+
+            _visibleColIndices = VisibleColIndices;
+        }
+
+        base.OnParametersSet();
+    }
+
+    private bool CompareIndices(List<int> oldIndices, List<int> newIndices)
+    {
+        // for the purpose of this comparison we just want to know whether
+        // we need to re-render, so we do not need to compare all elements
+        if (oldIndices.Count != newIndices.Count)
+            return true;
+        if (oldIndices.FirstOrDefault() != newIndices.FirstOrDefault())
+            return true;
+        if (oldIndices.LastOrDefault() != newIndices.LastOrDefault())
+            return true;
+        return false;
+    }
+
+}
