@@ -1,12 +1,17 @@
 ﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.DataStructures.Geometry
+@using BlazorDatasheet.Edit
+@using BlazorDatasheet.Edit.DefaultComponents
 @using BlazorDatasheet.Render
 @using BlazorDatasheet.SharedPages.Extensions
 <Datasheet
-    CustomCellTypeDefinitions="_definitions"
-    Sheet="_sheet"></Datasheet>
+CustomCellTypeDefinitions="_definitions"
+Sheet="_sheet"></Datasheet>
 
 
 @code{
+
+
 
     private Sheet _sheet = null!;
     private Dictionary<string, CellTypeDefinition> _definitions = null!;
@@ -15,12 +20,41 @@
     {
         _definitions = new Dictionary<string, CellTypeDefinition>()
         {
-            { "progress", CellTypeDefinition.Create<ProgressEditor, ProgressRenderer>() }
+            { "progress", CellTypeDefinition.Create<ProgressEditor, ProgressRenderer>() },
+            {"button", CellTypeDefinition.Create<TextEditorComponent, ButtonRenderer>() },
+            {"button2", CellTypeDefinition.Create<LabelEditor, ButtonRenderer>() }
         };
 
         _sheet = new Sheet(5, 5);
         _sheet.FillRandomNumbers(0, 200);
-        _sheet.Cells.SetType(_sheet.Region, "progress");
+        _sheet.Cells.SetType(0, 1, "progress");
+        //_sheet.Cells.SetType(_sheet.Region, "progress");
+
+
+        for (int i = 0; i < _sheet.NumRows; i++)
+        {
+            _sheet.Cells.SetCellMetaData(i, 2, "EventHandler", async (Sheet sheet, VisualCell cell) =>
+            {
+                System.Diagnostics.Debug.WriteLine(cell.Row + "-" + cell.Col);
+                await Task.CompletedTask;
+            });
+        }
+
+        _sheet.Cells.SetType(new ColumnRegion(2), "button");
+        _sheet.Cells.SetType(new ColumnRegion(3), "button2");
+
+
+        //insert a row before the first row
+        _sheet.Rows.InsertAt(0,2);
+
+        for (int i = 0; i < 2; i++)
+        {
+            _sheet.Cells.SetCellMetaData(i, 2, "EventHandler", async (Sheet sheet, VisualCell cell) =>
+            {
+                System.Diagnostics.Debug.WriteLine(cell.Row + "-" + cell.Col);
+                await Task.CompletedTask;
+            });
+        }
     }
 
 }

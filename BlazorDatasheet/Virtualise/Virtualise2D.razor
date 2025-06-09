@@ -11,9 +11,9 @@
 }
 
 <div
-    class="@Class"
-    @ref="_contentEl"
-    style="
+class="@Class"
+@ref="_contentEl"
+style="
         width: @(totalSize.Width)px;
     height: @(totalSize.Height)px;
     display: grid;
@@ -27,7 +27,7 @@
     <div aria-hidden="true" @ref="_fillerTop" style="grid-area: fT"></div>
     <div aria-hidden="true" @ref="_fillerRight" style=" grid-area: fR"></div>
     <div
-        style="grid-area: C; display: grid; grid-template-columns: @_contentColTemplate; grid-template-rows: @_contentRowTemplate;">
+    style="grid-area: C; display: grid; grid-template-columns: @_contentColTemplate; grid-template-rows: @_contentRowTemplate;">
         @{
             var rowOffset = 1;
         }
@@ -38,9 +38,9 @@
                 @if (RowTemplate != null)
                 {
                     <div
-                        class="@RowClass"
-                        style="display: grid; grid-column: 1 / span @_currentViewport.ViewRegion.Width; grid-row: @rowOffset; grid-template-columns: subgrid; grid-template-rows: subgrid;"
-                        @key="row">
+                    class="@RowClass"
+                    style="display: grid; grid-column: 1 / span @_currentViewport.ViewRegion.Width; grid-row: @rowOffset; grid-template-columns: subgrid; grid-template-rows: subgrid;"
+                    @key="row">
                         @RowTemplate(new VirtualRowArgs(row, rowOffset, _currentViewport.ViewRegion.Left, _currentViewport.ViewRegion.Right, _visibleColIndices))
                     </div>
                 }
@@ -285,10 +285,18 @@
 
     internal async Task<Rect?> CalculateViewRect(ElementReference reference)
     {
-        if (_virtualiser == null)
-            return new Rect(0, 0, 0, 0);
+        if (_virtualiser == null || string.IsNullOrEmpty(reference.Id))
+            return null;
 
-        return await _virtualiser.InvokeAsync<Rect>("calculateViewRect", reference);
+        try
+        {
+            return await _virtualiser.InvokeAsync<Rect>("calculateViewRect", reference);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+        
     }
 
     public async ValueTask DisposeAsync()

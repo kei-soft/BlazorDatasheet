@@ -1,0 +1,34 @@
+﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Core.Edit
+@using BlazorDatasheet.Core.Interfaces
+@inherits BlazorDatasheet.Edit.BaseEditor
+<style>
+    .no-border-input {
+        border: none;
+        outline: none;
+    }
+
+    .no-border-input:focus {
+        border: none;
+        outline: none;
+        box-shadow: none;
+    }
+</style>
+
+<input type="text" @ref="InputRef" readonly class="no-border-input" >
+    @CurrentValue
+</input>
+
+@code {
+
+    public override void BeforeEdit(IReadOnlyCell cell, Sheet sheet)
+    {
+        CurrentValue = cell.Value?.ToString() ?? string.Empty;
+    }
+
+    public override void BeginEdit(EditEntryMode entryMode, string? editValue, string key)
+    {
+        
+    }
+
+}

@@ -1,0 +1,27 @@
+﻿@using BlazorDatasheet.Core.Data
+@using BlazorDatasheet.Render
+@inherits BlazorDatasheet.Render.BaseRenderer
+
+<span @onclick="ClickedAsync">@Text</span>
+
+@code {
+    private string Text => Cell.Value?.ToString() ?? "";
+    
+    private Func<Sheet, VisualCell, Task>? EventHandler;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        /// meta data won't follow cell after insert/delete row, must cache when create
+        EventHandler = (Func<Sheet, VisualCell, Task>?)(this.Sheet.Cells.GetMetaData(this.Cell.Row, this.Cell.Col, "EventHandler"));
+    }
+
+    private async Task ClickedAsync()
+    {
+        if (this.EventHandler != null)
+        {
+            await ((Func<Sheet, VisualCell, Task>)EventHandler).Invoke(this.Sheet, this.Cell);
+        }
+
+    }
+}
