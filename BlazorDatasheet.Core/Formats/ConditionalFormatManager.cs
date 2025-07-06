@@ -11,7 +11,7 @@ public class ConditionalFormatManager
     private readonly Sheet _sheet;
 
     private readonly List<ConditionalFormatAbstractBase> _registered = new();
-    private readonly ConsolidatedDataStore<ConditionalFormatAbstractBase> _appliedFormats = new();
+    private readonly OffsetConsolidatedDataStore<ConditionalFormatAbstractBase> _appliedFormats = new();
 
     public ConditionalFormatManager(Sheet sheet,
         CellStore cellStore)

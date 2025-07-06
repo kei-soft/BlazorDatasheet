@@ -8,7 +8,7 @@ namespace BlazorDatasheet.Core.Data.Cells;
 
 public partial class CellStore
 {
-    private readonly MergeRegionDataStore<CellMetadata> _metaDataStore = new();
+    private readonly OffsetMergeRegionDataStore<CellMetadata> _metaDataStore = new();
 
     /// <summary>
     /// Sets cell metadata, specified by name, for the cell at position row, col
@@ -44,5 +44,5 @@ public partial class CellStore
         return container.GetItem(name);
     }
 
-    internal MergeRegionDataStore<CellMetadata> GetMetaDataStore() => _metaDataStore;
+    internal OffsetMergeRegionDataStore<CellMetadata> GetMetaDataStore() => _metaDataStore;
 }

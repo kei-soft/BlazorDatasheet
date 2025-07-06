@@ -480,6 +480,14 @@ public abstract class RowColInfoStore
     }
 
     /// <summary>
+    /// Inserts rows or columns using offset-based data stores.
+    /// </summary>
+    public void InsertAtOffset(int index, int count = 1)
+    {
+        InsertAt(index, count);
+    }
+
+    /// <summary>
     /// Sets the size between the two indices given (inclusive) to the size given (in px).
     /// </summary>
     /// <param name="indexStart"></param>

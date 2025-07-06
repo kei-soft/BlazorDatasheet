@@ -12,7 +12,7 @@ public partial class CellStore
     /// <summary>
     /// Stores individual cell formats.
     /// </summary>
-    private readonly MergeRegionDataStore<CellFormat> _formatStore = new();
+    private readonly OffsetMergeRegionDataStore<CellFormat> _formatStore = new();
 
     /// <summary>
     /// Merges the new cell format into any existing formats
@@ -57,5 +57,5 @@ public partial class CellStore
         return _formatStore.GetDataRegions(region);
     }
 
-    internal MergeRegionDataStore<CellFormat> GetFormatStore() => _formatStore;
+    internal OffsetMergeRegionDataStore<CellFormat> GetFormatStore() => _formatStore;
 }

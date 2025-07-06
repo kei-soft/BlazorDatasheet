@@ -19,9 +19,9 @@ namespace BlazorDatasheet.Core.Data.Cells
         /// <summary>
         /// The merged cells in the sheet.
         /// </summary>
-        private readonly RegionDataStore<bool> _mergeStore = new(1, expandWhenInsertAfter: false);
+        private readonly OffsetMergeRegionDataStore<bool> _mergeStore = new(1, expandWhenInsertAfter: false);
 
-        internal RegionDataStore<bool> GetMergeStore() => _mergeStore;
+        internal OffsetMergeRegionDataStore<bool> GetMergeStore() => _mergeStore;
 
         /// <summary>
         /// Add a range as a merged cell. If the range overlaps any existing merged cells, the merge
