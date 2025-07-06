@@ -7,7 +7,7 @@ namespace BlazorDatasheet.DataStructures.Store;
 /// A storage of regions, where if the region is added, regions are merged into any existing.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class MergeRegionDataStore<T> : RegionDataStore<T> where T : IMergeable<T>, IEquatable<T>
+public class MergeRegionDataStore<T> : OffsetRegionDataStore<T> where T : IMergeable<T>, IEquatable<T>
 {
     public MergeRegionDataStore(int minArea = 0, bool expandOnInsert = true) : base(minArea, expandOnInsert)
     {
