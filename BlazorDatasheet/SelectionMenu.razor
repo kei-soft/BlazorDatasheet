@@ -100,7 +100,7 @@
 
             @if (MenuOptions.InsertRowsEnabled)
             {
-                <SheetMenuItem OnClick="() => sheet.Rows.InsertAt(r.Top, r.Height)">Insert row(s) above</SheetMenuItem>
+                <SheetMenuItem OnClick="() => sheet.Rows.InsertAtUsingOffsets(r.Top, r.Height)">Insert row(s) above</SheetMenuItem>
             }
 
             @if (MenuOptions.DeleteRowsEnabled)

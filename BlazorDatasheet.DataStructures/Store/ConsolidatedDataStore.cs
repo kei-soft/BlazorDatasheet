@@ -8,7 +8,7 @@ namespace BlazorDatasheet.DataStructures.Store;
 /// to consolidate these regions into a smaller number of non-overlapping regions.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class ConsolidatedDataStore<T> : RegionDataStore<T> where T : IEquatable<T>
+public class ConsolidatedDataStore<T> : OffsetRegionDataStore<T> where T : IEquatable<T>
 {
     /// <summary>
     /// Keeps track of the regions that each data apply to.
