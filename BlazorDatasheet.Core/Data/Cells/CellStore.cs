@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+
 using BlazorDatasheet.Core.Commands.Data;
 using BlazorDatasheet.Core.Formats;
 using BlazorDatasheet.Core.Interfaces;
@@ -112,16 +113,23 @@ public partial class CellStore
 
     internal CellStoreRestoreData InsertRowColAt(int index, int count, Axis axis)
     {
+        var ValueRestoreData = _dataStore.InsertRowColAt(index, count, axis);
+        var FormatRestoreData = _formatStore.InsertRowColAt(index, count, axis);
+        var TypeRestoreData = _typeStore.InsertRowColAt(index, count, axis);
+        var ValidRestoreData = _validStore.InsertRowColAt(index, count, axis);
+        var MergeRestoreData = _mergeStore.InsertRowColAt(index, count, axis);
+        var FormulaRestoreData = _formulaStore.InsertRowColAt(index, count, axis);
+        var DependencyManagerRestoreData = Sheet.FormulaEngine.DependencyManager.InsertRowColAt(index, count, axis, Sheet.Name);
+
         var restoreData = new CellStoreRestoreData
         {
-            ValueRestoreData = _dataStore.InsertRowColAt(index, count, axis),
-            FormatRestoreData = _formatStore.InsertRowColAt(index, count, axis),
-            TypeRestoreData = _typeStore.InsertRowColAt(index, count, axis),
-            ValidRestoreData = _validStore.InsertRowColAt(index, count, axis),
-            MergeRestoreData = _mergeStore.InsertRowColAt(index, count, axis),
-            FormulaRestoreData = _formulaStore.InsertRowColAt(index, count, axis),
-            DependencyManagerRestoreData =
-                Sheet.FormulaEngine.DependencyManager.InsertRowColAt(index, count, axis, Sheet.Name)
+            ValueRestoreData = ValueRestoreData,
+            FormatRestoreData = FormatRestoreData,
+            TypeRestoreData = TypeRestoreData,
+            ValidRestoreData = ValidRestoreData,
+            MergeRestoreData = MergeRestoreData,
+            FormulaRestoreData = FormulaRestoreData,
+            DependencyManagerRestoreData = DependencyManagerRestoreData
         };
 
 

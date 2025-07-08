@@ -17,91 +17,91 @@
 
     @if (sheet is not null && sheet.Selection.ActiveRegion != null)
     {
-        <MenuSection SectionId="0">
-            @if (MenuOptions.ClearEnabled)
-            {
-                <SheetMenuItem OnClick="() => sheet.Cells.ClearCells(sheet.Selection.Regions)">Clear</SheetMenuItem>
-            }
-            @if (MenuOptions.MergeEnabled && !sheet.Selection.ActiveRegion.IsSingleCell())
-            {
-                <SheetMenuItem OnClick="() => sheet.Cells.Merge(sheet.Selection.Regions)">Merge</SheetMenuItem>
-            }
-            @if (MenuOptions.MergeEnabled && sheet.Cells.AnyMerges(sheet.Selection.ActiveRegion))
-            {
-                <SheetMenuItem OnClick="() => sheet.Cells.UnMerge(sheet.Selection.Regions)">Un-merge</SheetMenuItem>
-            }
-            @if (MenuOptions.AlignmentEnabled)
-            {
-                <SheetSubMenu Label="Horiz. Alignment">
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.Start }))">
-                        Left
-                    </SheetMenuItem>
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.Center }))">
-                        Centre
-                    </SheetMenuItem>
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.End }))">
-                        Right
-                    </SheetMenuItem>
-                </SheetSubMenu>
-                <SheetSubMenu Label="Vert. Alignment">
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.Start }))">
-                        Top
-                    </SheetMenuItem>
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.Center }))">
-                        Centre
-                    </SheetMenuItem>
-                    <SheetMenuItem
-                        OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.End }))">
-                        Bottom
-                    </SheetMenuItem>
-                </SheetSubMenu>
-            }
-        </MenuSection>
-
-        @if (sheet.Selection.Regions.Count == 1 && sheet.Selection.ActiveRegion is ColumnRegion c)
+    <MenuSection SectionId="0">
+        @if (MenuOptions.ClearEnabled)
         {
-            @if (MenuOptions.InsertColsEnabled ||
-                 MenuOptions.DeleteColsEnabled ||
-                 MenuOptions.HideColsEnabled)
-            {
-                <SheetMenuDivider/>
-            }
-
-            @if (MenuOptions.InsertColsEnabled)
-            {
-                <SheetMenuItem OnClick="() => sheet.Columns.InsertAt(c.Left, c.Width)">Insert column(s) left
+            <SheetMenuItem OnClick="() => sheet.Cells.ClearCells(sheet.Selection.Regions)">Clear</SheetMenuItem>
+        }
+        @if (MenuOptions.MergeEnabled && !sheet.Selection.ActiveRegion.IsSingleCell())
+        {
+            <SheetMenuItem OnClick="() => sheet.Cells.Merge(sheet.Selection.Regions)">Merge</SheetMenuItem>
+        }
+        @if (MenuOptions.MergeEnabled && sheet.Cells.AnyMerges(sheet.Selection.ActiveRegion))
+        {
+            <SheetMenuItem OnClick="() => sheet.Cells.UnMerge(sheet.Selection.Regions)">Un-merge</SheetMenuItem>
+        }
+        @if (MenuOptions.AlignmentEnabled)
+        {
+            <SheetSubMenu Label="Horiz. Alignment">
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.Start }))">
+                    Left
                 </SheetMenuItem>
-            }
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.Center }))">
+                    Centre
+                </SheetMenuItem>
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { HorizontalTextAlign = TextAlign.End }))">
+                    Right
+                </SheetMenuItem>
+            </SheetSubMenu>
+            <SheetSubMenu Label="Vert. Alignment">
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.Start }))">
+                    Top
+                </SheetMenuItem>
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.Center }))">
+                    Centre
+                </SheetMenuItem>
+                <SheetMenuItem
+                OnClick="@(() => sheet.SetFormat(sheet.Selection.Regions, new CellFormat() { VerticalTextAlign = TextAlign.End }))">
+                    Bottom
+                </SheetMenuItem>
+            </SheetSubMenu>
+        }
+    </MenuSection>
 
-            @if (MenuOptions.DeleteColsEnabled)
-            {
-                <SheetMenuItem OnClick="() => sheet.Columns.RemoveAt(c.Left, c.Width)">Delete column(s)</SheetMenuItem>
-            }
-
-            @if (MenuOptions.HideColsEnabled)
-            {
-                <SheetMenuDivider/>
-                <SheetMenuItem OnClick="() => sheet.Columns.Hide(c.Left, c.Width)">Hide column(s)</SheetMenuItem>
-                <SheetMenuItem OnClick="() => sheet.Columns.Unhide(c.Left, c.Width)">Un-hide column(s)</SheetMenuItem>
-            }
+    @if (sheet.Selection.Regions.Count == 1 && sheet.Selection.ActiveRegion is ColumnRegion c)
+    {
+        @if (MenuOptions.InsertColsEnabled ||
+            MenuOptions.DeleteColsEnabled ||
+            MenuOptions.HideColsEnabled)
+        {
+            <SheetMenuDivider/>
         }
 
-        @if (sheet.Selection.Regions.Count == 1 && sheet.Selection.ActiveRegion is RowRegion r)
+        @if (MenuOptions.InsertColsEnabled)
         {
-            @if (MenuOptions.InsertRowsEnabled || MenuOptions.DeleteRowsEnabled || MenuOptions.HideRowsEnabled)
-            {
-                <SheetMenuDivider/>
-            }
+            <SheetMenuItem OnClick="() => sheet.Columns.InsertAt(c.Left, c.Width)">Insert column(s) left
+            </SheetMenuItem>
+        }
 
-            @if (MenuOptions.InsertRowsEnabled)
-            {
-                <SheetMenuItem OnClick="() => sheet.Rows.InsertAtUsingOffsets(r.Top, r.Height)">Insert row(s) above</SheetMenuItem>
-            }
+        @if (MenuOptions.DeleteColsEnabled)
+        {
+            <SheetMenuItem OnClick="() => sheet.Columns.RemoveAt(c.Left, c.Width)">Delete column(s)</SheetMenuItem>
+        }
+
+        @if (MenuOptions.HideColsEnabled)
+        {
+            <SheetMenuDivider/>
+            <SheetMenuItem OnClick="() => sheet.Columns.Hide(c.Left, c.Width)">Hide column(s)</SheetMenuItem>
+            <SheetMenuItem OnClick="() => sheet.Columns.Unhide(c.Left, c.Width)">Un-hide column(s)</SheetMenuItem>
+        }
+    }
+
+    @if (sheet.Selection.Regions.Count == 1 && sheet.Selection.ActiveRegion is RowRegion r)
+    {
+        @if (MenuOptions.InsertRowsEnabled || MenuOptions.DeleteRowsEnabled || MenuOptions.HideRowsEnabled)
+        {
+            <SheetMenuDivider/>
+        }
+
+        @if (MenuOptions.InsertRowsEnabled)
+        {
+                <SheetMenuItem OnClick="() => {sheet.Commands.PauseHistory(); sheet.BatchUpdates(); sheet.Rows.InsertAtUsingOffsets(r.Top, r.Height); sheet.EndBatchUpdates();sheet.Commands.ResumeHistory();}">Insert row(s) above</SheetMenuItem>
+    }
 
             @if (MenuOptions.DeleteRowsEnabled)
             {

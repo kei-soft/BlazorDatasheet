@@ -64,17 +64,38 @@ internal class SparseList<T>
             return;
 
         var nValues = Values.Keys.Count;
+
+        var updatedValues = new SortedList<int, T>(Values.Count);
+        for (int i = 0; i < Values.Count; i++)
+        {
+            var key = Values.Keys[i];
+            var value = Values.Values[i];
+
+            if (key < index)
+            {
+                updatedValues.Add(key, value);
+            }
+            else
+            {
+                var newKey = key + nItems;
+                updatedValues.Add(newKey, value);
+            }
+        }
+
+        Values = updatedValues;
+
+
         // Work backwards from the end of the data to where we have
         // inserted the col and increase the col values by 1
         // (when we insert a col we don't add any new cols to Values)
-        for (int i = nValues - 1; i >= index; i--)
-        {
-            // Shuffle up the values
-            var val = Values.Values[i];
-            var newIndexNum = Values.Keys[i] + nItems;
-            Values.RemoveAt(i);
-            Values.Add(newIndexNum, val);
-        }
+        //for (int i = nValues - 1; i >= index; i--)
+        //{
+        //    // Shuffle up the values
+        //    var val = Values.Values[i];
+        //    var newIndexNum = Values.Keys[i] + nItems;
+        //    Values.RemoveAt(i);
+        //    Values.Add(newIndexNum, val);
+        //}
     }
 
     /// <summary>
