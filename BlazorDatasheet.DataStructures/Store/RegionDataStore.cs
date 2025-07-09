@@ -140,8 +140,12 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
         // 3. Any regions below the index should be shifted down
         var i0 = expand ? index - 1 : index;
         IRegion region = axis == Axis.Col ? new ColumnRegion(i0, index) : new RowRegion(i0, index);
-        var overlapping = GetDataRegions(region);
-        var dataRegionsToAdd = new List<DataRegion<T>>();
+
+        var before = GetBefore(index - 1, axis).ToList();
+        var overlapping = GetDataRegions(region).ToList();
+        var after = GetAfter(index - 1, axis).ToList();
+
+        var newData = new List<DataRegion<T>>();
         var regionsAdded = new List<DataRegion<T>>();
         var regionsRemoved = new List<DataRegion<T>>();
 
@@ -153,27 +157,26 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             if (!expand && index > i1)
                 continue;
 
-            Tree.Delete(overlap);
             regionsRemoved.Add(overlap);
             var expanded = new DataRegion<T>(overlap.Data, overlap.Region.Clone());
             expanded.Region.Expand(axis == Axis.Row ? Edge.Bottom : Edge.Right, count);
             expanded.UpdateEnvelope();
             regionsAdded.Add(expanded);
-            dataRegionsToAdd.Add(expanded);
+            newData.Add(expanded);
         }
 
-        // index - 1 because the top of the region has to be above the region to shift it down
-        var below = this.GetAfter(index - 1, axis);
-        foreach (var r in below)
+        foreach (var r in after)
         {
-            Tree.Delete(r);
             var dRow = axis == Axis.Row ? count : 0;
             var dCol = axis == Axis.Col ? count : 0;
             r.Shift(dRow, dCol);
-            dataRegionsToAdd.Add(r);
+            newData.Add(r);
         }
 
-        Tree.BulkLoad(dataRegionsToAdd);
+        newData.AddRange(before);
+
+        Tree.Clear();
+        Tree.BulkLoad(newData);
         return new RegionRestoreData<T>()
         {
             RegionsAdded = regionsAdded,
@@ -228,30 +231,25 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
     private RegionRestoreData<T> RemoveRowsOrColumsAndShift(int start, int end, Axis axis)
     {
         IRegion region = axis == Axis.Col ? new ColumnRegion(start, end) : new RowRegion(start, end);
-        // keep track of any removed data regions for the restore data.
         var removed = new List<DataRegion<T>>();
 
-        var overlapping = GetDataRegions(region);
-        var newDataToAdd = new List<DataRegion<T>>();
+        var before = GetBefore(start - 1, axis).ToList();
+        var overlapping = GetDataRegions(region).ToList();
+        var after = GetAfter(end, axis).ToList();
+
+        var newData = new List<DataRegion<T>>();
         var dataAdded = new List<DataRegion<T>>();
 
         foreach (var overlap in overlapping)
         {
-            // If the overlapping region is fully contained within the region, remove it.
             if (region.Contains(overlap.Region))
             {
-                Tree.Delete(overlap);
                 removed.Add(overlap);
                 continue;
             }
 
-            // if the region is partially overlapping (it must be because we know it is overlapping and it doesn't fully
-            // overlap) then shift the overlap left and contract the left edge
-
             var intersection = overlap.Region.GetIntersection(region)!;
-            // contraction amount in row direction
             var cRow = axis == Axis.Row ? intersection.Height : 0;
-            // contraction amount in col direction
             var cCol = axis == Axis.Col ? intersection.Width : 0;
             var cEdge = axis == Axis.Col ? Edge.Right : Edge.Bottom;
             var shift = start - overlap.Region.GetLeadingEdgeOffset(axis);
@@ -260,34 +258,32 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             var sRow = axis == Axis.Row ? shift : 0;
             var sCol = axis == Axis.Col ? shift : 0;
 
-            Tree.Delete(overlap);
             removed.Add(overlap);
 
             var newRegion = new DataRegion<T>(overlap.Data, overlap.Region.Clone());
             newRegion.Region.Contract(cEdge, Math.Max(cRow, cCol));
             newRegion.Region.Shift(sRow, sCol);
 
-            // if the region is less than the minimum area, don't add it back
             if (newRegion.Region.Area <= MinArea)
                 continue;
 
             newRegion.UpdateEnvelope();
             dataAdded.Add(newRegion);
-            newDataToAdd.Add(newRegion);
+            newData.Add(newRegion);
         }
 
-        // shift anything right or below the removed region right/down
-        var dataToShift = GetAfter(end, axis);
-        foreach (var dataRegion in dataToShift)
+        foreach (var dataRegion in after)
         {
-            Tree.Delete(dataRegion);
             var nRows = axis == Axis.Row ? region.Height : 0;
             var nCols = axis == Axis.Col ? region.Width : 0;
             dataRegion.Shift(-nRows, -nCols);
-            newDataToAdd.Add(dataRegion);
+            newData.Add(dataRegion);
         }
 
-        Tree.BulkLoad(newDataToAdd);
+        newData.AddRange(before);
+
+        Tree.Clear();
+        Tree.BulkLoad(newData);
 
         return new RegionRestoreData<T>()
         {
@@ -313,6 +309,30 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             case Axis.Col:
                 return this.GetDataRegions(new ColumnRegion(rowOrCol + 1, int.MaxValue))
                     .Where(x => x.Region.Left >= rowOrCol + 1);
+        }
+
+        return Enumerable.Empty<DataRegion<T>>();
+    }
+
+    /// <summary>
+    /// Gets data to the left/above the given row or column.
+    /// </summary>
+    /// <param name="rowOrCol"></param>
+    /// <param name="axis"></param>
+    /// <returns></returns>
+    private IEnumerable<DataRegion<T>> GetBefore(int rowOrCol, Axis axis)
+    {
+        if (rowOrCol <= 0)
+            return Enumerable.Empty<DataRegion<T>>();
+
+        switch (axis)
+        {
+            case Axis.Row:
+                return this.GetDataRegions(new RowRegion(0, rowOrCol - 1))
+                    .Where(x => x.Region.Bottom <= rowOrCol - 1);
+            case Axis.Col:
+                return this.GetDataRegions(new ColumnRegion(0, rowOrCol - 1))
+                    .Where(x => x.Region.Right <= rowOrCol - 1);
         }
 
         return Enumerable.Empty<DataRegion<T>>();
