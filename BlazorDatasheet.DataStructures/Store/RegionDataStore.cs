@@ -233,16 +233,18 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
     private RegionRestoreData<T> RemoveRowsOrColumsAndShift(int start, int end, Axis axis)
     {
         IRegion region = axis == Axis.Col ? new ColumnRegion(start, end) : new RowRegion(start, end);
-        var removed = new List<DataRegion<T>>();
 
-        var before = GetBefore(start - 1, axis).ToList();
+        var removed = new List<DataRegion<T>>();
+        var added = new List<DataRegion<T>>();
+
+        // Collect data that will be shifted before any mutations occur
+        var dataToShift = GetAfter(end, axis).ToList();
 
         var overlapping = GetDataRegions(region).ToList();
-        var newDataToAdd = new List<DataRegion<T>>();
-        var dataAdded = new List<DataRegion<T>>();
-
         foreach (var overlap in overlapping)
         {
+            Tree.Delete(overlap);
+
             if (region.Contains(overlap.Region))
             {
                 removed.Add(overlap);
@@ -250,47 +252,42 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             }
 
             var intersection = overlap.Region.GetIntersection(region)!;
-            var cRow = axis == Axis.Row ? intersection.Height : 0;
-            var cCol = axis == Axis.Col ? intersection.Width : 0;
-            var cEdge = axis == Axis.Col ? Edge.Right : Edge.Bottom;
+            var contractAmount = axis == Axis.Row ? intersection.Height : intersection.Width;
+            var contractEdge = axis == Axis.Col ? Edge.Right : Edge.Bottom;
+
             var shift = start - overlap.Region.GetLeadingEdgeOffset(axis);
             if (shift > 0)
                 shift = 0;
             var sRow = axis == Axis.Row ? shift : 0;
             var sCol = axis == Axis.Col ? shift : 0;
 
-            removed.Add(overlap);
-
             var newRegion = new DataRegion<T>(overlap.Data, overlap.Region.Clone());
-            newRegion.Region.Contract(cEdge, Math.Max(cRow, cCol));
+            newRegion.Region.Contract(contractEdge, contractAmount);
             newRegion.Region.Shift(sRow, sCol);
 
-            if (newRegion.Region.Area <= MinArea)
-                continue;
+            if (newRegion.Region.Area > MinArea)
+            {
+                newRegion.UpdateEnvelope();
+                Tree.Insert(newRegion);
+                added.Add(newRegion);
+            }
 
-            newRegion.UpdateEnvelope();
-            dataAdded.Add(newRegion);
-            newDataToAdd.Add(newRegion);
+            removed.Add(overlap);
         }
 
-        var dataToShift = GetAfter(end, axis);
+        int shiftRows = axis == Axis.Row ? region.Height : 0;
+        int shiftCols = axis == Axis.Col ? region.Width : 0;
         foreach (var dataRegion in dataToShift)
         {
-            var nRows = axis == Axis.Row ? region.Height : 0;
-            var nCols = axis == Axis.Col ? region.Width : 0;
-            dataRegion.Shift(-nRows, -nCols);
-            newDataToAdd.Add(dataRegion);
+            Tree.Delete(dataRegion);
+            dataRegion.Shift(-shiftRows, -shiftCols);
+            Tree.Insert(dataRegion);
         }
-
-        newDataToAdd.AddRange(before);
-
-        Tree.Clear();
-        Tree.BulkLoad(newDataToAdd);
 
         return new RegionRestoreData<T>()
         {
             RegionsRemoved = removed,
-            RegionsAdded = dataAdded,
+            RegionsAdded = added,
             Shifts = [new(axis, start - 1, -(end - start + 1), null)],
         };
     }
