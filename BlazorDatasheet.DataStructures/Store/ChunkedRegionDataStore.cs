@@ -8,55 +8,67 @@ namespace BlazorDatasheet.DataStructures.Store
     {
         private const int CHUNK_SIZE = 5000; // 5000행씩 처리
         private readonly Dictionary<int, RegionDataStore<T>> _chunks = new();
+        private readonly OffsetManager _rowOffsets = new();
+        private readonly OffsetManager _colOffsets = new();
 
         public ChunkedRegionDataStore(int minArea = 0, bool expandWhenInsertAfter = true)
             : base(minArea, expandWhenInsertAfter)
         {
         }
 
+        private int PhysicalRow(int logicalRow) => _rowOffsets.ToPhysical(logicalRow);
+        private int PhysicalCol(int logicalCol) => _colOffsets.ToPhysical(logicalCol);
+        private bool RowInserted(int row) => _rowOffsets.IsInserted(row);
+        private bool ColInserted(int col) => _colOffsets.IsInserted(col);
+
         public new RegionRestoreData<T> InsertRowColAt(int index, int count, Axis axis)
         {
             if (axis == Axis.Col)
             {
-                // 열 삽입은 모든 청크에 영향
-                return base.InsertRowColAt(index, count, axis);
+                var phys = PhysicalCol(index);
+                var ret = base.InsertRowColAt(phys, count, axis);
+                _colOffsets.Insert(index, count);
+                ret.Shifts = [new(axis, index, count, null)];
+                return ret;
             }
 
-            var restore = new RegionRestoreData<T>();
 
-            // 행 삽입은 해당 청크와 이후 청크에 영향
-            var chunkIndex = index / CHUNK_SIZE;
-            var localIndex = index % CHUNK_SIZE;
+            var physIndex = PhysicalRow(index);
+            var chunkIndex = physIndex / CHUNK_SIZE;
+            var localIndex = physIndex % CHUNK_S
 
             if (!_chunks.ContainsKey(chunkIndex))
             {
                 _chunks[chunkIndex] = new RegionDataStore<T>(MinArea, ExpandWhenInsertAfter);
-
-                // 해당 청크의 데이터를 메인 store에서 이동
                 MoveDataToChunk(chunkIndex);
             }
 
-            // 삽입 청크 처리
+            var restore = new RegionRestoreData<T>();
             restore.Merge(_chunks[chunkIndex].InsertRowColAt(localIndex, count, axis));
+            restore.Merge(base.InsertRowColAt(physIndex, count, axis));
 
-            // 이후 청크들 전부 시프트
-            foreach (var key in _chunks.Keys.Where(k => k > chunkIndex).OrderBy(k => k))
-            {
-                restore.Merge(_chunks[key].InsertRowColAt(0, count, axis));
-            }
+            _rowOffsets.Insert(index, count);
+            restore.Shifts = [new(axis, index, count, null)];
 
-            // 메인 스토어도 시프트
-            restore.Merge(base.InsertRowColAt(index, count, axis));
             return restore;
         }
 
         public new RegionRestoreData<T> RemoveRowColAt(int index, int count, Axis axis)
         {
             if (axis == Axis.Col)
-                return base.RemoveRowColAt(index, count, axis);
+            {
+                var phys = PhysicalCol(index);
+                var ret = base.RemoveRowColAt(phys, count, axis);
+                _colOffsets.Remove(index, count);
+                ret.Shifts = [new(axis, index, -count, null)];
+                return ret;
+            }
 
-            var startChunk = index / CHUNK_SIZE;
-            var endChunk = (index + count - 1) / CHUNK_SIZE;
+            var physStart = PhysicalRow(index);
+            var physEnd = PhysicalRow(index + count - 1);
+
+            var startChunk = physStart / CHUNK_SIZE;
+            var endChunk = physEnd / CHUNK_SIZE;
             var restore = new RegionRestoreData<T>();
 
             for (int i = startChunk; i <= endChunk; i++)
@@ -65,19 +77,18 @@ namespace BlazorDatasheet.DataStructures.Store
                     continue;
 
                 var chunkStart = i * CHUNK_SIZE;
-                var localStart = Math.Max(index, chunkStart) - chunkStart;
-                var localEnd = Math.Min(index + count - 1, chunkStart + CHUNK_SIZE - 1) - chunkStart;
+                var localStart = Math.Max(physStart, chunkStart) - chunkStart;
+                var localEnd = Math.Min(physEnd, chunkStart + CHUNK_SIZE - 1) - chunkStart;
                 var part = _chunks[i].RemoveRowColAt(localStart, localEnd - localStart + 1, axis);
                 restore.Merge(part);
             }
 
-            // 이후 청크들 전부 시프트
-            foreach (var key in _chunks.Keys.Where(k => k > endChunk).OrderBy(k => k))
-            {
-                restore.Merge(_chunks[key].RemoveRowColAt(0, count, axis));
-            }
 
-            restore.Merge(base.RemoveRowColAt(index, count, axis));
+            restore.Merge(base.RemoveRowColAt(physStart, count, axis));
+
+            _rowOffsets.Remove(index, count);
+            restore.Shifts = [new(axis, index, -count, null)];
+
             return restore;
         }
 
@@ -87,7 +98,7 @@ namespace BlazorDatasheet.DataStructures.Store
             var endRow = (chunkIndex + 1) * CHUNK_SIZE - 1;
             var chunkRegion = new RowRegion(startRow, endRow);
 
-            var dataInChunk = GetDataRegions(chunkRegion).ToList();
+            var dataInChunk = base.GetDataRegions(chunkRegion).ToList();
 
             foreach (var data in dataInChunk)
             {
@@ -104,8 +115,12 @@ namespace BlazorDatasheet.DataStructures.Store
 
         public new RegionRestoreData<T> Add(IRegion region, T data)
         {
-            var startChunk = region.Top / CHUNK_SIZE;
-            var endChunk = region.Bottom / CHUNK_SIZE;
+            var phys = new Region(
+                PhysicalRow(region.Top), PhysicalRow(region.Bottom),
+                PhysicalCol(region.Left), PhysicalCol(region.Right));
+
+            var startChunk = phys.Top / CHUNK_SIZE;
+            var endChunk = phys.Bottom / CHUNK_SIZE;
 
             // 단일 청크에만 걸쳐 있는 경우 청크에 저장
             if (startChunk == endChunk)
@@ -113,26 +128,30 @@ namespace BlazorDatasheet.DataStructures.Store
                 if (!_chunks.ContainsKey(startChunk))
                     _chunks[startChunk] = new RegionDataStore<T>(MinArea, ExpandWhenInsertAfter);
 
-                var localRegion = region.Clone();
+                var localRegion = phys.Clone();
                 localRegion.Shift(-startChunk * CHUNK_SIZE, 0);
                 return _chunks[startChunk].Add(localRegion, data);
             }
 
             // 두 개 이상의 청크에 걸치면 기본 저장소 사용
-            return base.Add(region, data);
+            return base.Add(phys, data);
         }
 
         public new IEnumerable<T> GetData(int row, int col)
         {
-            var chunkIndex = row / CHUNK_SIZE;
-            var localRow = row % CHUNK_SIZE;
+            if (RowInserted(row) || ColInserted(col))
+                return Enumerable.Empty<T>();
+
+            var physRow = PhysicalRow(row);
+            var physCol = PhysicalCol(col);
+
+            var chunkIndex = physRow / CHUNK_SIZE;
+            var localRow = physRow % CHUNK_SIZE;
 
             if (_chunks.ContainsKey(chunkIndex))
-            {
-                return _chunks[chunkIndex].GetData(localRow, col);
-            }
+                return _chunks[chunkIndex].GetData(localRow, physCol);
 
-            return base.GetData(row, col);
+            return base.GetData(physRow, physCol);
         }
 
         public new IEnumerable<T> GetData(IRegion region)
@@ -142,26 +161,36 @@ namespace BlazorDatasheet.DataStructures.Store
 
         public new bool Contains(int row, int col)
         {
-            var chunkIndex = row / CHUNK_SIZE;
-            var localRow = row % CHUNK_SIZE;
+            if (RowInserted(row) || ColInserted(col))
+                return false;
+
+            var physRow = PhysicalRow(row);
+            var physCol = PhysicalCol(col);
+            var chunkIndex = physRow / CHUNK_SIZE;
+            var localRow = physRow % CHUNK_SIZE;
 
             if (_chunks.ContainsKey(chunkIndex) &&
-                _chunks[chunkIndex].Contains(localRow, col))
+                _chunks[chunkIndex].Contains(localRow, physCol))
                 return true;
 
-            return base.Contains(row, col);
+            return base.Contains(physRow, physCol);
         }
 
         public new IEnumerable<DataRegion<T>> GetDataRegions(int row, int col)
         {
-            var chunkIndex = row / CHUNK_SIZE;
-            var localRow = row % CHUNK_SIZE;
+            if (RowInserted(row) || ColInserted(col))
+                return Enumerable.Empty<DataRegion<T>>();
+
+            var physRow = PhysicalRow(row);
+            var physCol = PhysicalCol(col);
+            var chunkIndex = physRow / CHUNK_SIZE;
+            var localRow = physRow % CHUNK_SIZE;
 
             IEnumerable<DataRegion<T>> chunkData = Enumerable.Empty<DataRegion<T>>();
             if (_chunks.ContainsKey(chunkIndex))
             {
                 chunkData = _chunks[chunkIndex]
-                    .GetDataRegions(localRow, col)
+                    .GetDataRegions(localRow, physCol)
                     .Select(dr =>
                     {
                         var reg = dr.Region.Clone();
@@ -170,13 +199,17 @@ namespace BlazorDatasheet.DataStructures.Store
                     });
             }
 
-            return chunkData.Concat(base.GetDataRegions(row, col));
+            return chunkData.Concat(base.GetDataRegions(physRow, physCol));
         }
 
         public new IEnumerable<DataRegion<T>> GetDataRegions(IRegion region)
         {
-            var startChunk = region.Top / CHUNK_SIZE;
-            var endChunk = region.Bottom / CHUNK_SIZE;
+            var phys = new Region(
+                PhysicalRow(region.Top), PhysicalRow(region.Bottom),
+                PhysicalCol(region.Left), PhysicalCol(region.Right));
+
+            var startChunk = phys.Top / CHUNK_SIZE;
+            var endChunk = phys.Bottom / CHUNK_SIZE;
 
             var results = new List<DataRegion<T>>();
 
@@ -188,7 +221,7 @@ namespace BlazorDatasheet.DataStructures.Store
                 var chunkStart = i * CHUNK_SIZE;
                 var chunkEnd = (i + 1) * CHUNK_SIZE - 1;
                 var chunkRegion = new RowRegion(chunkStart, chunkEnd);
-                var intersection = region.GetIntersection(chunkRegion);
+                var intersection = phys.GetIntersection(chunkRegion);
                 if (intersection == null)
                     continue;
 
@@ -205,7 +238,7 @@ namespace BlazorDatasheet.DataStructures.Store
                 results.AddRange(localData);
             }
 
-            results.AddRange(base.GetDataRegions(region));
+            results.AddRange(base.GetDataRegions(phys));
             return results;
         }
     }
