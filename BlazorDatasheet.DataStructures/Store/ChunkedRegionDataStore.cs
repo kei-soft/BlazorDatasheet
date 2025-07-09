@@ -22,7 +22,9 @@ namespace BlazorDatasheet.DataStructures.Store
                 return base.InsertRowColAt(index, count, axis);
             }
 
-            // 행 삽입은 해당 청크만 처리
+            var restore = new RegionRestoreData<T>();
+
+            // 행 삽입은 해당 청크와 이후 청크에 영향
             var chunkIndex = index / CHUNK_SIZE;
             var localIndex = index % CHUNK_SIZE;
 
@@ -34,8 +36,18 @@ namespace BlazorDatasheet.DataStructures.Store
                 MoveDataToChunk(chunkIndex);
             }
 
-            // 청크 내에서만 처리
-            return _chunks[chunkIndex].InsertRowColAt(localIndex, count, axis);
+            // 삽입 청크 처리
+            restore.Merge(_chunks[chunkIndex].InsertRowColAt(localIndex, count, axis));
+
+            // 이후 청크들 전부 시프트
+            foreach (var key in _chunks.Keys.Where(k => k > chunkIndex).OrderBy(k => k))
+            {
+                restore.Merge(_chunks[key].InsertRowColAt(0, count, axis));
+            }
+
+            // 메인 스토어도 시프트
+            restore.Merge(base.InsertRowColAt(index, count, axis));
+            return restore;
         }
 
         public new RegionRestoreData<T> RemoveRowColAt(int index, int count, Axis axis)
@@ -57,6 +69,12 @@ namespace BlazorDatasheet.DataStructures.Store
                 var localEnd = Math.Min(index + count - 1, chunkStart + CHUNK_SIZE - 1) - chunkStart;
                 var part = _chunks[i].RemoveRowColAt(localStart, localEnd - localStart + 1, axis);
                 restore.Merge(part);
+            }
+
+            // 이후 청크들 전부 시프트
+            foreach (var key in _chunks.Keys.Where(k => k > endChunk).OrderBy(k => k))
+            {
+                restore.Merge(_chunks[key].RemoveRowColAt(0, count, axis));
             }
 
             restore.Merge(base.RemoveRowColAt(index, count, axis));
