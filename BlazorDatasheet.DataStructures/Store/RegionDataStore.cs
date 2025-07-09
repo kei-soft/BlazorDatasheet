@@ -146,6 +146,7 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
         var after = GetAfter(index - 1, axis).ToList();
 
         var newData = new List<DataRegion<T>>();
+
         var regionsAdded = new List<DataRegion<T>>();
         var regionsRemoved = new List<DataRegion<T>>();
 
@@ -165,6 +166,7 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             newData.Add(expanded);
         }
 
+
         foreach (var r in after)
         {
             var dRow = axis == Axis.Row ? count : 0;
@@ -172,6 +174,7 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             r.Shift(dRow, dCol);
             newData.Add(r);
         }
+
 
         newData.AddRange(before);
 
@@ -232,6 +235,7 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
     {
         IRegion region = axis == Axis.Col ? new ColumnRegion(start, end) : new RowRegion(start, end);
         var removed = new List<DataRegion<T>>();
+
 
         var before = GetBefore(start - 1, axis).ToList();
         var overlapping = GetDataRegions(region).ToList();
@@ -333,6 +337,7 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             case Axis.Col:
                 return this.GetDataRegions(new ColumnRegion(0, rowOrCol - 1))
                     .Where(x => x.Region.Right <= rowOrCol - 1);
+
         }
 
         return Enumerable.Empty<DataRegion<T>>();
