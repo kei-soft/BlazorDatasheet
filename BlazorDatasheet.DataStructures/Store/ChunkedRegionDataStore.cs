@@ -32,9 +32,10 @@ namespace BlazorDatasheet.DataStructures.Store
                 return ret;
             }
 
+
             var physIndex = PhysicalRow(index);
             var chunkIndex = physIndex / CHUNK_SIZE;
-            var localIndex = physIndex % CHUNK_SIZE;
+            var localIndex = physIndex % CHUNK_S
 
             if (!_chunks.ContainsKey(chunkIndex))
             {
@@ -48,6 +49,7 @@ namespace BlazorDatasheet.DataStructures.Store
 
             _rowOffsets.Insert(index, count);
             restore.Shifts = [new(axis, index, count, null)];
+
             return restore;
         }
 
@@ -81,10 +83,12 @@ namespace BlazorDatasheet.DataStructures.Store
                 restore.Merge(part);
             }
 
+
             restore.Merge(base.RemoveRowColAt(physStart, count, axis));
 
             _rowOffsets.Remove(index, count);
             restore.Shifts = [new(axis, index, -count, null)];
+
             return restore;
         }
 
