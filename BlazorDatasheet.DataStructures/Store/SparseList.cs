@@ -165,39 +165,32 @@ internal class SparseList<T>
     {
         var deleted = new List<(int indexDeleted, T)>();
 
-        // Find where the next row should be inserted after in the dict
-        var startIndex = Values.Keys.BinarySearchIndexOf(itemIndex, Comparer<int>.Default);
-        if (startIndex < 0)
-            startIndex = ~startIndex; // the index points to the next row 
+        if (nItems <= 0 || Values.Count == 0)
+            return deleted;
 
-        if (startIndex > Values.Count - 1)
-            return new List<(int indexDeleted, T)>();
+        var updatedValues = new SortedList<int, T>(Values.Count);
 
-        int startItemIndex = Values.Keys[startIndex];
-        if (startItemIndex < itemIndex)
-            startIndex++;
-
-        var endIndex = Values.Keys.BinarySearchClosest(itemIndex + nItems - 1);
-        endIndex = Math.Min(endIndex, Values.Count - 1);
-
-        var endItemIndex = Values.Keys[endIndex];
-        if (endItemIndex > itemIndex + nItems - 1)
-            endIndex--;
-
-        for (int i = 0; i <= (endIndex - startIndex); i++)
+        for (int i = 0; i < Values.Count; i++)
         {
-            deleted.Add((Values.GetKeyAtIndex(startIndex), Values.GetValueAtIndex(startIndex)));
-            Values.RemoveAt(startIndex);
+            var key = Values.Keys[i];
+            var value = Values.Values[i];
+
+            if (key < itemIndex)
+            {
+                updatedValues.Add(key, value);
+            }
+            else if (key >= itemIndex + nItems)
+            {
+                var newKey = key - nItems;
+                updatedValues.Add(newKey, value);
+            }
+            else
+            {
+                deleted.Add((key, value));
+            }
         }
 
-        for (int i = startIndex; i < Values.Count; i++)
-        {
-            // Shuffle down the values
-            var val = Values.Values[i];
-            var newItemIndex = Values.Keys[i] - nItems;
-            Values.RemoveAt(i);
-            Values.Add(newItemIndex, val);
-        }
+        Values = updatedValues;
 
         return deleted;
     }
