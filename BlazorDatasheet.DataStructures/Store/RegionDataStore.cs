@@ -142,11 +142,9 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
         IRegion region = axis == Axis.Col ? new ColumnRegion(i0, index) : new RowRegion(i0, index);
 
         var before = GetBefore(index - 1, axis).ToList();
+
         var overlapping = GetDataRegions(region).ToList();
-        var after = GetAfter(index - 1, axis).ToList();
-
-        var newData = new List<DataRegion<T>>();
-
+        var dataRegionsToAdd = new List<DataRegion<T>>();
         var regionsAdded = new List<DataRegion<T>>();
         var regionsRemoved = new List<DataRegion<T>>();
 
@@ -163,23 +161,24 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
             expanded.Region.Expand(axis == Axis.Row ? Edge.Bottom : Edge.Right, count);
             expanded.UpdateEnvelope();
             regionsAdded.Add(expanded);
-            newData.Add(expanded);
+            dataRegionsToAdd.Add(expanded);
         }
 
 
-        foreach (var r in after)
+        var dRow = axis == Axis.Row ? count : 0;
+        var dCol = axis == Axis.Col ? count : 0;
+
+        var below = GetAfter(index - 1, axis).ToList();
+        foreach (var r in below)
         {
-            var dRow = axis == Axis.Row ? count : 0;
-            var dCol = axis == Axis.Col ? count : 0;
             r.Shift(dRow, dCol);
-            newData.Add(r);
+            dataRegionsToAdd.Add(r);
         }
 
-
-        newData.AddRange(before);
+        dataRegionsToAdd.AddRange(before);
 
         Tree.Clear();
-        Tree.BulkLoad(newData);
+        Tree.BulkLoad(dataRegionsToAdd);
         return new RegionRestoreData<T>()
         {
             RegionsAdded = regionsAdded,
@@ -236,12 +235,10 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
         IRegion region = axis == Axis.Col ? new ColumnRegion(start, end) : new RowRegion(start, end);
         var removed = new List<DataRegion<T>>();
 
-
         var before = GetBefore(start - 1, axis).ToList();
-        var overlapping = GetDataRegions(region).ToList();
-        var after = GetAfter(end, axis).ToList();
 
-        var newData = new List<DataRegion<T>>();
+        var overlapping = GetDataRegions(region).ToList();
+        var newDataToAdd = new List<DataRegion<T>>();
         var dataAdded = new List<DataRegion<T>>();
 
         foreach (var overlap in overlapping)
@@ -273,21 +270,22 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
 
             newRegion.UpdateEnvelope();
             dataAdded.Add(newRegion);
-            newData.Add(newRegion);
+            newDataToAdd.Add(newRegion);
         }
 
-        foreach (var dataRegion in after)
+        var dataToShift = GetAfter(end, axis);
+        foreach (var dataRegion in dataToShift)
         {
             var nRows = axis == Axis.Row ? region.Height : 0;
             var nCols = axis == Axis.Col ? region.Width : 0;
             dataRegion.Shift(-nRows, -nCols);
-            newData.Add(dataRegion);
+            newDataToAdd.Add(dataRegion);
         }
 
-        newData.AddRange(before);
+        newDataToAdd.AddRange(before);
 
         Tree.Clear();
-        Tree.BulkLoad(newData);
+        Tree.BulkLoad(newDataToAdd);
 
         return new RegionRestoreData<T>()
         {

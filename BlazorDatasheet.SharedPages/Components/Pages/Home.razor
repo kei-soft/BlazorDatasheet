@@ -75,11 +75,11 @@
 
     protected override void OnInitialized()
     {
-        _sheet = new Sheet(50, 5);
+        _sheet = new Sheet(90000, 5);
         _sheet.Rows.HeadingWidth = 35;
         _sheet.Commands.PauseHistory();
         _sheet.BatchUpdates();
-        var values = new CellValue[49][];
+        var values = new CellValue[89999][];
 
         var r = new Random();
 

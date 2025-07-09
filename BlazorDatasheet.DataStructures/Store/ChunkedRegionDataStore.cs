@@ -1,6 +1,4 @@
 ﻿using BlazorDatasheet.DataStructures.Geometry;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace BlazorDatasheet.DataStructures.Store
 {
@@ -35,7 +33,7 @@ namespace BlazorDatasheet.DataStructures.Store
 
             var physIndex = PhysicalRow(index);
             var chunkIndex = physIndex / CHUNK_SIZE;
-            var localIndex = physIndex % CHUNK_S
+            var localIndex = physIndex % CHUNK_SIZE;
 
             if (!_chunks.ContainsKey(chunkIndex))
             {
