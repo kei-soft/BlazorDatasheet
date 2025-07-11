@@ -1,6 +1,8 @@
 using BlazorDatasheet.DataStructures.Geometry;
 using BlazorDatasheet.DataStructures.RTree;
 using BlazorDatasheet.DataStructures.Util;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BlazorDatasheet.DataStructures.Store;
 
@@ -605,5 +607,63 @@ public class RegionDataStore<T> : ISparseSource, IRowSource, IStore<T, RegionRes
         if (nextColIndex == int.MaxValue || nextColIndex == int.MinValue || nextColIndex == col)
             return -1;
         return nextColIndex;
+    }
+
+    /// <summary>
+    /// Inserts rows or columns while only processing a limited window
+    /// synchronously. The remaining data is updated on a background thread.
+    /// </summary>
+    public async Task<RegionRestoreData<T>> InsertRowColAtAsync(
+        int index,
+        int count,
+        Axis axis,
+        int visibleWindow = 10000,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var windowRegion = axis == Axis.Row
+            ? new RowRegion(Math.Max(0, index - visibleWindow), index + visibleWindow)
+            : new ColumnRegion(Math.Max(0, index - visibleWindow), index + visibleWindow);
+
+        var subStore = GetSubStore(windowRegion);
+        var partial = subStore.InsertRowColAt(index, count, axis);
+
+        _ = Task.Run(() =>
+        {
+            progress?.Report(0);
+            InsertRowColAt(index, count, axis);
+            progress?.Report(100);
+        }, cancellationToken);
+
+        return partial;
+    }
+
+    /// <summary>
+    /// Removes rows or columns while only processing a limited window
+    /// synchronously. The remaining data is updated on a background thread.
+    /// </summary>
+    public async Task<RegionRestoreData<T>> RemoveRowColAtAsync(
+        int index,
+        int count,
+        Axis axis,
+        int visibleWindow = 10000,
+        IProgress<int>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        var windowRegion = axis == Axis.Row
+            ? new RowRegion(Math.Max(0, index - visibleWindow), index + visibleWindow)
+            : new ColumnRegion(Math.Max(0, index - visibleWindow), index + visibleWindow);
+
+        var subStore = GetSubStore(windowRegion);
+        var partial = subStore.RemoveRowColAt(index, count, axis);
+
+        _ = Task.Run(() =>
+        {
+            progress?.Report(0);
+            RemoveRowColAt(index, count, axis);
+            progress?.Report(100);
+        }, cancellationToken);
+
+        return partial;
     }
 }
